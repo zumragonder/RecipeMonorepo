@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Java / Spring
+target/
+build/
+
+# Node / Web
+node_modules/
+dist/
+.build/
+
+# Env & secrets
+.env
+.env.*.local
+*.keystore
+*.jks
+serviceAccount.json
+google-services.json
+firebase-adminsdk*.json
