@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.recipe_sso.backend.dto.CreateRecipeRequest;
 import com.example.recipe_sso.backend.model.Ingredient;
 import com.example.recipe_sso.backend.model.Recipe;
 import com.example.recipe_sso.backend.model.recipeingredient.RecipeIngredient;
@@ -34,21 +35,21 @@ public class RecipeController {
     }
 
     @PostMapping
-    public Recipe create(@RequestBody CreateRecipeReq req) {
+    public Recipe create(@RequestBody CreateRecipeRequest req) {
         // DTO -> entity bağlama
         List<RecipeIngredient> items = new ArrayList<>();
-        if (req.ingredients != null) {
-            for (IngredientDto d : req.ingredients) {
+        if (req.ingredients() != null) {
+            for (var d : req.ingredients()) {
                 Ingredient ing = new Ingredient();
-                ing.setId(d.ingredientId);
+                ing.setId(d.ingredientId());
                 RecipeIngredient ri = new RecipeIngredient();
                 ri.setIngredient(ing);
-                ri.setAmount(d.amount);
-                ri.setUnit(d.unit);
+                ri.setAmount(d.amount());
+                ri.setUnit(d.unit());
                 items.add(ri);
             }
         }
-        return recipeService.createRecipe(req.title, req.description, req.authorId, items);
+        return recipeService.createRecipe(req.title(), req.description(), req.authorId(), items);
     }
 
     @GetMapping("/suggest")
@@ -66,16 +67,5 @@ public class RecipeController {
         return recipeService.search(name, minRating, PageRequest.of(page, size));
     }
 
-    // --- DTOs ---
-    public static class CreateRecipeReq {
-        public String title;
-        public String description;
-        public Long authorId; // güvenlik ekleyene kadar böyle
-        public List<IngredientDto> ingredients;
-    }
-    public static class IngredientDto {
-        public Long ingredientId;
-        public String amount;
-        public String unit;
-    }
+  
 }

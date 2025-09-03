@@ -7,14 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.recipe_sso.backend.model.rating.Rating;
-import com.example.recipe_sso.backend.model.rating.RatingId;
 
-public interface RatingRepository extends JpaRepository<Rating, RatingId> {
-    // user.id ve recipe.id alanlarından
-    Optional<Rating> findByUser_IdAndRecipe_Id(Long userId, Long recipeId);
+public interface RatingRepository extends JpaRepository<Rating, Long> {
 
-    @Query("select avg(r.score) from Rating r where r.recipe.id = :recipeId")
+    // userId + recipeId ile tek kaydı bul
+    Optional<Rating> findByUserIdAndRecipeId(Long userId, Long recipeId);
+
+    // Belirli bir recipe için ortalama puan
+    @Query("select avg(r.value) from Rating r where r.recipeId = :recipeId")
     Double calcAvg(@Param("recipeId") Long recipeId);
 
-    long countByRecipe_Id(Long recipeId);
+    // Belirli bir recipe için oy sayısı
+    long countByRecipeId(Long recipeId);
 }

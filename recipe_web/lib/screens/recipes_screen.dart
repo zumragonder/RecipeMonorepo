@@ -6,6 +6,10 @@ class RecipesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text("Tarifler"),
+        backgroundColor: Colors.deepOrange,
+      ),
       body: const Center(
         child: Text(
           "Tarifler Sayfası (içerik sonra eklenecek)",
@@ -14,4 +18,4 @@ class RecipesScreen extends StatelessWidget {
       ),
     );
   }
-}
+} 

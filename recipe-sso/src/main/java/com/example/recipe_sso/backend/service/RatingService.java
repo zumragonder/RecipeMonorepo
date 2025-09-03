@@ -3,8 +3,6 @@ package com.example.recipe_sso.backend.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.recipe_sso.backend.model.Recipe;
-import com.example.recipe_sso.backend.model.User;
 import com.example.recipe_sso.backend.model.rating.Rating;
 import com.example.recipe_sso.backend.repository.RatingRepository;
 import com.example.recipe_sso.backend.repository.RecipeRepository;
@@ -22,24 +20,35 @@ public class RatingService {
 
     @Transactional
     public Rating rate(Long recipeId, Long userId, int score) {
-        if (ratingRepository.findByUser_IdAndRecipe_Id(userId, recipeId).isPresent()) {
+        // (Opsiyonel) 1-5 aralığı gibi bir kuralın varsa kontrol et
+        if (score < 1 || score > 5) {
+            throw new IllegalArgumentException("score must be between 1 and 5");
+        }
+
+        // Aynı kullanıcının aynı tarife ikinci kez oy vermesini engelle
+        if (ratingRepository.findByUserIdAndRecipeId(userId, recipeId).isPresent()) {
             throw new IllegalStateException("User already rated this recipe");
         }
 
-        Recipe recipe = recipeRepository.findById(recipeId)
-                .orElseThrow(() -> new IllegalArgumentException("recipe not found"));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("user not found"));
+        // Varlık kontrolleri (entity fetch etmeye gerek yok)
+        if (!recipeRepository.existsById(recipeId)) {
+            throw new IllegalArgumentException("recipe not found");
+        }
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("user not found");
+        }
 
+        // Kaydı oluştur
         Rating rating = new Rating();
-        rating.setRecipeId(recipe.getId());    
-        rating.setUserId(user.getId());        
-        rating.setValue(score);               
+        rating.setRecipeId(recipeId);
+        rating.setUserId(userId);
+        rating.setValue(score);
         ratingRepository.save(rating);
 
-        double avg = ratingRepository.calcAvg(recipeId);
-        long count = ratingRepository.countByRecipe_Id(recipeId);
-        recipeService.updateRatingStats(recipeId, avg, count);
+        // İstatistikleri güncelle
+        Double avg = ratingRepository.calcAvg(recipeId);
+        long count = ratingRepository.countByRecipeId(recipeId);
+        recipeService.updateRatingStats(recipeId, (avg != null ? avg : 0.0), count);
 
         return rating;
     }

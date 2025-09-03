@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/home_screen.dart'; // ekledim
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +30,7 @@ class RecipeApp extends StatelessWidget {
             scaffoldBackgroundColor: Colors.white,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
             appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.grey,
+              backgroundColor: Colors.deepOrange,
               foregroundColor: Colors.white,
               titleTextStyle: TextStyle(
                 color: Colors.white,
@@ -43,7 +44,8 @@ class RecipeApp extends StatelessWidget {
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
             textTheme: const TextTheme(
@@ -72,7 +74,8 @@ class RecipeApp extends StatelessWidget {
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
             textTheme: const TextTheme(
@@ -80,10 +83,16 @@ class RecipeApp extends StatelessWidget {
             ),
           ),
 
-          // 🔹 Tema seçimi (switch ile değişiyor)
+          // 🔹 Tema seçimi
           themeMode: currentMode,
 
-          home: const WelcomeScreen(), // ilk ekran
+          // İlk açılan ekran
+          home: const WelcomeScreen(),
+
+          // 🔹 Route tanımları (login sonrası yönlendirme için)
+          routes: {
+            "/home": (context) => const HomeScreen(),
+          },
         );
       },
     );

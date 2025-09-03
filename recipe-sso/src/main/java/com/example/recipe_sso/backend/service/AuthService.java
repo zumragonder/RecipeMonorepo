@@ -1,5 +1,6 @@
 package com.example.recipe_sso.backend.service;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -14,17 +15,24 @@ import lombok.RequiredArgsConstructor;
 public class AuthService {
     private final UserRepository users;
 
-    public Optional<User> register(String email, String rawPassword, String displayName) {
-        if (users.existsByEmail(email)) return Optional.empty();
-        User u = new User();
-        u.setEmail(email);
-        u.setPasswordHash(rawPassword); // TODO: BCrypt ile hashle
-        u.setDisplayName(displayName);
-        return Optional.of(users.save(u));
-    }
+    public User loginOrRegisterGoogleUser(String email, String name, String pictureUrl, String providerId) {
+        Optional<User> existing = users.findByEmail(email);
 
-    public Optional<User> login(String email, String rawPassword) {
-        return users.findByEmail(email)
-                .filter(u -> u.getPasswordHash().equals(rawPassword)); // TODO: BCrypt match
+        if (existing.isPresent()) {
+            User u = existing.get();
+            u.setLastLoginAt(Instant.now());
+            u.setName(name);
+            u.setPictureUrl(pictureUrl);
+            u.setProviderId(providerId);
+            return users.save(u); // güncelle
+        } else {
+            User u = new User();
+            u.setEmail(email);
+            u.setName(name);
+            u.setPictureUrl(pictureUrl);
+            u.setProviderId(providerId);
+            u.setLastLoginAt(Instant.now());
+            return users.save(u); // yeni kayıt
+        }
     }
 }

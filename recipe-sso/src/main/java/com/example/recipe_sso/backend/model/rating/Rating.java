@@ -1,22 +1,27 @@
 package com.example.recipe_sso.backend.model.rating;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.IdClass;
 
 @Entity
-@IdClass(RatingId.class)
 public class Rating {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private Long userId;
 
-    @Id
     private Long recipeId;
 
     private Integer value;
 
     // Getters and setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
 
