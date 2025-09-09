@@ -5,20 +5,20 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState(); 
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    bool isDark = themeNotifier.value == ThemeMode.dark;
+    bool isDark = themeNotifier.value == ThemeMode.dark; // Tema durumunu kontrol et
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Ayarlar"),
         backgroundColor: Colors.deepOrange,
       ),
-      body: ListView(
+      body: ListView( // Kaydırılabilir liste
         children: [
           SwitchListTile(
             title: const Text("Koyu Tema"),

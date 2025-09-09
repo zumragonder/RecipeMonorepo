@@ -40,7 +40,7 @@ public class AuthController {
     @GetMapping("/x")
     public ResponseEntity<?> getSession() {
         System.out.println("⚡ Sağlık kontrolü endpointi çağrıldı");
-        return ResponseEntity.ok("Auth endpoint is working!");
+        return ResponseEntity.ok("Auth endpoint is working!"); //200 OK
     }
 
     // Basit error DTO (şimdilik dursun)

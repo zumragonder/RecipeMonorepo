@@ -1,78 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'home_screen.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'dart:convert'; // JSON işlemleri için
+import 'package:http/http.dart' as http; // HTTP istekleri için
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+  const WelcomeScreen({super.key}); 
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  String? _error;
+  String? _error;  // Giriş hatalarını göstermek için kullanılan değişken
 
-// Google login sonrası
-Future<void> _handleGoogleSignIn() async {
-  try {
-    final provider = GoogleAuthProvider()
-      ..addScope('email')
-      ..addScope('profile')
-      ..setCustomParameters({'prompt': 'select_account'});
+  // 🔹 Google ile giriş yapma fonksiyonu
+  Future<void> _handleGoogleSignIn() async {
+    try {
 
-    final cred = await FirebaseAuth.instance.signInWithPopup(provider);
-    final user = cred.user;
+            // Google login sağlayıcısı ayarlanıyor
+      final provider = GoogleAuthProvider()
+        ..addScope('email')
+        ..addScope('profile')
+        ..setCustomParameters({'prompt': 'select_account'});   //dart object
 
-    if (user != null) {
-      final body = {
-        "email": user.email,
-        "name": user.displayName,
-        "pictureUrl": user.photoURL,
-        "providerId": "google.com"
-      };
+      // Firebase üzerinden Google popup login işlemi başlatılıyor
+      final cred = await FirebaseAuth.instance.signInWithPopup(provider);
+      final user = cred.user;
 
-      // 🔹 Spring Boot backend'e POST at
-      final response = await http.post(
-        Uri.parse("http://localhost:8080/api/auth/google"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
-      );
+      if (user != null) {
+                // Backend'e gönderilecek kullanıcı bilgileri
+        final body = {
+          "email": user.email,
+          "name": user.displayName,
+          "pictureUrl": user.photoURL,
+          "providerId": "google.com"
+        };  
 
-      if (response.statusCode == 200) {
-        print("✅ Backend'e kaydedildi: ${response.body}");
-
-        if (!mounted) return; // context kontrolü
-
-        // 🔹 HomeScreen’e geçiş
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        // 🔹 Spring Boot backend'e POST isteği
+        final response = await http.post(
+          Uri.parse("http://localhost:8080/api/auth/google"),
+          headers: {"Content-Type": "application/json"}, // JSON içeriği
+          body: jsonEncode(body),  
         );
-      } else {
-        setState(() => _error =
-            "❌ Backend hata: ${response.statusCode} - ${response.body}");
-      }
-    }
-  } catch (e) {
-    setState(() => _error = "Google giriş hatası: $e");
-  }
-}
 
+        if (response.statusCode == 200) { 
+          print("✅ Backend'e kaydedildi: ${response.body}"); 
+
+          if (!mounted) return; // context geçerli mi kontrol et
+
+          // 🔹 Başarılı giriş sonrası HomeScreen’e yönlendir
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        } else {
+                    // Backend’ten hata dönerse ekranda göster
+          setState(() => _error =
+              "❌ Backend hata: ${response.statusCode} - ${response.body}");
+        }
+      }
+    } catch (e) {      // Firebase login hatası
+      setState(() => _error = "Google giriş hatası: $e");
+    }
+  }
+
+  // 🔹 Facebook ile giriş yapma fonksiyonu
   Future<void> _handleFacebookSignIn() async {
     try {
       final provider = FacebookAuthProvider();
       provider.addScope('email');
       provider.addScope('public_profile');
-
+      
+      // Firebase popup ile giriş
       await FirebaseAuth.instance.signInWithPopup(provider);
-
+     
+      // Başarılı giriş sonrası HomeScreen’e geç
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } on FirebaseAuthException catch (e) {
+            // Özel hata: e-posta başka giriş yöntemine bağlıysa uyarı
       if (e.code == 'account-exists-with-different-credential') {
         setState(() {
           _error =
@@ -87,10 +96,12 @@ Future<void> _handleGoogleSignIn() async {
     }
   }
 
+  // 🔹 Anonim giriş fonksiyonu (misafir kullanıcı)
   Future<void> _handleAnonSignIn() async {
     try {
       await FirebaseAuth.instance.signInAnonymously();
-
+     
+      // Başarılı giriş sonrası HomeScreen’e yönlendir
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -143,58 +154,74 @@ Future<void> _handleGoogleSignIn() async {
                     ),
                     const SizedBox(height: 40),
 
-                    // 🔹 Google ile Giriş (sadece ikon)
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.deepOrange, width: 2),
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: _handleGoogleSignIn,
-                      child: const Icon(
-                        Icons.g_mobiledata,
-                        size: 36,
-                        color: Colors.white,
-                      ),
-                    ),
+                    // 🔹 Sosyal giriş butonları yan yana
+                    Row(
+                      children: [
+                        // Google Button
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                  color: Colors.deepOrange, width: 2),
+                              backgroundColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: _handleGoogleSignIn,
+                            child: const Icon(
+                              Icons.g_mobiledata,
+                              size: 40,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
 
-                    const SizedBox(height: 24),
+                        // Facebook Button
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side:
+                                  const BorderSide(color: Colors.blue, width: 2),
+                              backgroundColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: _handleFacebookSignIn,
+                            child: const Icon(
+                              Icons.facebook,
+                              size: 36,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
 
-                    // 🔹 Facebook ile Giriş (sadece ikon)
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.blue, width: 2),
-                        foregroundColor: Colors.blue,
-                        backgroundColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: _handleFacebookSignIn,
-                      child: const Icon(
-                        Icons.facebook,
-                        size: 32,
-                        color: Colors.blue,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // 🔹 Anonim Giriş
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.deepOrange, width: 2),
-                        foregroundColor: Colors.deepOrange,
-                        backgroundColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 18),
-                      ),
-                      onPressed: _handleAnonSignIn,
-                      icon: const Icon(Icons.person_outline, size: 26),
-                      label: const Text(
-                        "Anonim Giriş",
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                      ),
+                        // Anonim Button
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                  color: Colors.deepOrange, width: 2),
+                              backgroundColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: _handleAnonSignIn,
+                            child: const Icon(
+                              Icons.person_outline,
+                              size: 36,
+                              color: Colors.deepOrange,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
 
                     if (_error != null)
