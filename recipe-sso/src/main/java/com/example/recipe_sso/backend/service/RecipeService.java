@@ -28,12 +28,20 @@ public class RecipeService {
     private final IngredientRepository ingredientRepository;
     private final UserRepository userRepository;
 
+    /** 🔍 Tek tarif getir */
     public Optional<Recipe> get(Long id) {
         return recipeRepository.findById(id);
     }
 
+    /** ➕ Yeni tarif oluştur (tek + çoklu fotoğraf destekli) */
     @Transactional
-    public Recipe createRecipe(String title, String description, Long authorId, List<RecipeIngredient> items) {
+    public Recipe createRecipe(String title,
+                               String description,
+                               Long authorId,
+                               List<RecipeIngredient> items,
+                               String imageBase64,
+                               List<String> imagesBase64) {
+
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new IllegalArgumentException("author not found"));
 
@@ -42,21 +50,34 @@ public class RecipeService {
         recipe.setDescription(description);
         recipe.setAuthor(author);
 
+        // 📸 Tek fotoğraf (geriye uyumluluk için)
+        if (imageBase64 != null && !imageBase64.isBlank()) {
+            recipe.setImageBase64(imageBase64);
+        }
+
+        // 📸 Çoklu fotoğraf (yeni)
+        if (imagesBase64 != null && !imagesBase64.isEmpty()) {
+            recipe.setImagesBase64(imagesBase64);
+        }
+
+        // 🥗 Malzemeler
         if (items != null) {
             for (RecipeIngredient ri : items) {
                 // ingredient id dolu ise DB’den bağla
                 if (ri.getIngredient() != null && ri.getIngredient().getId() != null) {
                     Ingredient ing = ingredientRepository.findById(ri.getIngredient().getId())
-                            .orElseThrow(() -> new IllegalArgumentException("ingredient not found: " + ri.getIngredient().getId()));
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    "ingredient not found: " + ri.getIngredient().getId()));
                     ri.setIngredient(ing);
                 }
-                recipe.addIngredient(ri); // iki yönü de kurar
+                recipe.addIngredient(ri); // iki yönlü ilişkiyi kurar
             }
         }
 
         return recipeRepository.save(recipe);
     }
 
+    /** 📊 Malzeme önerisine göre tarifler */
     public Page<Recipe> suggestByIngredients(List<Long> ingredientIds, Pageable pageable) {
         if (ingredientIds == null || ingredientIds.isEmpty())
             return Page.empty(pageable);
@@ -65,6 +86,7 @@ public class RecipeService {
         return recipeRepository.suggestByIngredients(ingredientIds, pageable);
     }
 
+    /** 🔎 Tarif arama */
     public Page<Recipe> search(String name, Integer minRating, Pageable pageable) {
         boolean hasName = name != null && !name.isBlank();
         boolean hasMin = minRating != null;
@@ -81,6 +103,7 @@ public class RecipeService {
         }
     }
 
+    /** ⭐ Rating güncelleme */
     @Transactional
     public void updateRatingStats(Long recipeId, double avg, long count) {
         recipeRepository.findById(recipeId).ifPresent(r -> {
