@@ -1,8 +1,10 @@
 package com.example.recipe_sso.backend.controller;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,4 +36,16 @@ public class UserController {
         User saved = userRepository.save(user);
         return ResponseEntity.ok(saved);
     }
+
+    /** 👨‍🍳 Tüm şefleri listele */
+    @GetMapping
+    public List<UserDto> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(u -> new UserDto(u.getId(), u.getEmail(), u.getName()))
+                .toList();
+    }
+
+    /** Şef DTO */
+    public record UserDto(Long id, String email, String name) {}
 }

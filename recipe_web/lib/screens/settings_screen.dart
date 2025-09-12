@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeColor: Colors.deepOrange,
             onChanged: (val) {
               setState(() {
-                themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
+               // themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
               });
             },
           ),

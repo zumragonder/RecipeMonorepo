@@ -5,13 +5,13 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 
-/// Backend enum’ları
+/// Backend enum’ları (malzeme kategorileri)
 const kCategories = <String>[
   'MEAT','SEAFOOD','DAIRY','VEGETABLE','FRUIT',
   'GRAIN','LEGUME','SPICE','OIL','SAUCE','OTHER',
 ];
 
-/// UI etiketleri
+/// UI etiketleri (malzeme kategorileri için)
 const kCategoryLabels = {
   'MEAT':'Et',
   'SEAFOOD':'Deniz Ürünü',
@@ -25,6 +25,16 @@ const kCategoryLabels = {
   'SAUCE':'Sos',
   'OTHER':'Diğer',
 };
+
+/// Tarif kategorileri (backend RecipeCategory enum ile aynı)
+const kRecipeCategories = [
+  "HEPSI",   // özel, tüm tarifler
+  "TATLI",
+  "TUZLU",
+  "ICECEK",
+  "VEGAN",
+  "DIGER",
+];
 
 class AddRecipeScreen extends StatefulWidget {
   const AddRecipeScreen({super.key});
@@ -43,7 +53,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   bool _loadingPool = true;
   String? _msg;
 
-  String _selectedCategory = 'OTHER';
+  String _selectedCategory = 'OTHER'; // malzeme kategorisi
+  String? _selectedRecipeCategory;    // tarif kategorisi
 
   /// Çoklu görsel (web + mobil)
   final _picker = ImagePicker();
@@ -103,32 +114,39 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     return pid == "google.com" || pid == "facebook.com";
   }
 
-Future<void> _pickImages() async {
-  try {
-    // Çoklu seçim (mobil + web destekli)
-    final list = await _picker.pickMultiImage();
-    if (list.isNotEmpty) {
-      final bytesList = await Future.wait(list.map((x) => x.readAsBytes()));
-      setState(() => _images.addAll(bytesList));
-      return;
-    }
+  Future<void> _pickImages() async {
+    try {
+      // Çoklu seçim (mobil + web destekli)
+      final list = await _picker.pickMultiImage();
+      if (list.isNotEmpty) {
+        final bytesList = await Future.wait(list.map((x) => x.readAsBytes()));
+        setState(() => _images.addAll(bytesList));
+        return;
+      }
 
-    // Eğer cihaz pickMultiImage desteklemiyorsa tekli fallback
-    final one = await _picker.pickImage(source: ImageSource.gallery);
-    if (one != null) {
-      final bytes = await one.readAsBytes();
-      setState(() {
-        _images.add(bytes);
-      });
+      // Eğer cihaz pickMultiImage desteklemiyorsa tekli fallback
+      final one = await _picker.pickImage(source: ImageSource.gallery);
+      if (one != null) {
+        final bytes = await one.readAsBytes();
+        setState(() {
+          _images.add(bytes);
+        });
+      }
+    } catch (e) {
+      setState(() => _msg = "Fotoğraf seçilemedi: $e");
     }
-  } catch (e) {
-    setState(() => _msg = "Fotoğraf seçilemedi: $e");
   }
-}
 
-Future<void> _submitRecipe() async {
+  Future<void> _submitRecipe() async {
   if (!_isSocialLoggedIn()) {
     setState(() => _msg = "❌ Tarif eklemek için Google veya Facebook ile giriş yapın.");
+    return;
+  }
+
+  final user = FirebaseAuth.instance.currentUser;
+  final email = user?.email;
+  if (email == null) {
+    setState(() => _msg = "❌ Kullanıcı email alınamadı.");
     return;
   }
 
@@ -137,14 +155,15 @@ Future<void> _submitRecipe() async {
   final body = {
     "title": _title.text.trim(),
     "description": _desc.text.trim(),
-    "authorId": 1,
+    "authorEmail": email,   // ✅ artık email gönderiyoruz
     "ingredients": _selected.map((s) => {
       "ingredientId": s.ingredientId,
       "amount": s.amount.trim().isEmpty ? "1" : s.amount.trim(),
       "unit": s.unit.trim().isEmpty ? "adet" : s.unit.trim(),
     }).toList(),
-    if (imagesBase64.isNotEmpty) "imagesBase64": imagesBase64, // 📸 çoklu
-    if (imagesBase64.isNotEmpty) "imageBase64": imagesBase64.first, // 📸 geriye uyumluluk için tekli
+    if (_selectedRecipeCategory != null) "category": _selectedRecipeCategory,
+    if (imagesBase64.isNotEmpty) "imagesBase64": imagesBase64,
+    if (imagesBase64.isNotEmpty) "imageBase64": imagesBase64.first,
   };
 
   try {
@@ -161,6 +180,7 @@ Future<void> _submitRecipe() async {
         _desc.clear();
         _selected.clear();
         _images.clear();
+        _selectedRecipeCategory = null;
       });
       if (mounted) Navigator.pop(context, true);
     } else {
@@ -170,7 +190,6 @@ Future<void> _submitRecipe() async {
     setState(() => _msg = "❌ Ağ hatası: $e");
   }
 }
-
   Future<void> _showAddIngredientDialog() async {
     final nameCtrl = TextEditingController();
     String cat = _selectedCategory;
@@ -457,6 +476,24 @@ Future<void> _submitRecipe() async {
                     ),
                     const SizedBox(height: 16),
 
+                    // 🍽 Tarif kategorisi dropdown
+                    DropdownButtonFormField<String>(
+                      value: _selectedRecipeCategory,
+                      decoration: _whiteInput("Tarif Kategorisi"),
+                      dropdownColor: const Color(0xFF2A2A2A),
+                      style: const TextStyle(color: Colors.white),
+                      iconEnabledColor: Colors.white,
+                      items: kRecipeCategories.map((c) {
+                        return DropdownMenuItem(
+                          value: c,
+                          child: Text(c, style: const TextStyle(color: Colors.white)),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setState(() => _selectedRecipeCategory = v),
+                      validator: (v) => v == null ? "Kategori seçiniz" : null,
+                    ),
+                    const SizedBox(height: 16),
+
                     // 📸 Fotoğraflar
                     _imagesSection(),
                     const SizedBox(height: 16),
@@ -484,7 +521,9 @@ Future<void> _submitRecipe() async {
                       const SizedBox(height: 12),
                       Text(
                         _msg!,
-                        style: TextStyle(color: _msg!.startsWith("✅") ? Colors.green : Colors.red),
+                        style: TextStyle(
+                          color: _msg!.startsWith("✅") ? Colors.green : Colors.red,
+                        ),
                       ),
                     ],
                   ],

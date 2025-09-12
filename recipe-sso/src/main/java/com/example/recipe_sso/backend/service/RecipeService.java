@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.recipe_sso.backend.model.Ingredient;
 import com.example.recipe_sso.backend.model.Recipe;
+import com.example.recipe_sso.backend.model.RecipeCategory;   // 🍽️ yeni import
 import com.example.recipe_sso.backend.model.User;
 import com.example.recipe_sso.backend.model.recipeingredient.RecipeIngredient;
 import com.example.recipe_sso.backend.repository.IngredientRepository;
@@ -33,14 +34,15 @@ public class RecipeService {
         return recipeRepository.findById(id);
     }
 
-    /** ➕ Yeni tarif oluştur (tek + çoklu fotoğraf destekli) */
+    /** ➕ Yeni tarif oluştur (tek + çoklu fotoğraf + kategori destekli) */
     @Transactional
     public Recipe createRecipe(String title,
                                String description,
                                Long authorId,
                                List<RecipeIngredient> items,
                                String imageBase64,
-                               List<String> imagesBase64) {
+                               List<String> imagesBase64,
+                               RecipeCategory category) {   // 🍽️ kategori parametresi
 
         User author = userRepository.findById(authorId)
                 .orElseThrow(() -> new IllegalArgumentException("author not found"));
@@ -49,6 +51,7 @@ public class RecipeService {
         recipe.setTitle(title);
         recipe.setDescription(description);
         recipe.setAuthor(author);
+        recipe.setCategory(category);   // 🍽️ kategori set edildi
 
         // 📸 Tek fotoğraf (geriye uyumluluk için)
         if (imageBase64 != null && !imageBase64.isBlank()) {
@@ -63,14 +66,58 @@ public class RecipeService {
         // 🥗 Malzemeler
         if (items != null) {
             for (RecipeIngredient ri : items) {
-                // ingredient id dolu ise DB’den bağla
                 if (ri.getIngredient() != null && ri.getIngredient().getId() != null) {
                     Ingredient ing = ingredientRepository.findById(ri.getIngredient().getId())
                             .orElseThrow(() -> new IllegalArgumentException(
                                     "ingredient not found: " + ri.getIngredient().getId()));
                     ri.setIngredient(ing);
                 }
-                recipe.addIngredient(ri); // iki yönlü ilişkiyi kurar
+                recipe.addIngredient(ri);
+            }
+        }
+
+        return recipeRepository.save(recipe);
+    }
+
+    /** ➕ Yeni tarif oluştur (authorEmail ile) */
+    @Transactional
+    public Recipe createRecipeByEmail(String title,
+                                      String description,
+                                      String authorEmail,
+                                      List<RecipeIngredient> items,
+                                      String imageBase64,
+                                      List<String> imagesBase64,
+                                      RecipeCategory category) {
+
+        User author = userRepository.findByEmail(authorEmail)
+                .orElseThrow(() -> new IllegalArgumentException("author not found with email: " + authorEmail));
+
+        Recipe recipe = new Recipe();
+        recipe.setTitle(title);
+        recipe.setDescription(description);
+        recipe.setAuthor(author);
+        recipe.setCategory(category);
+
+        // 📸 Tek fotoğraf
+        if (imageBase64 != null && !imageBase64.isBlank()) {
+            recipe.setImageBase64(imageBase64);
+        }
+
+        // 📸 Çoklu fotoğraf
+        if (imagesBase64 != null && !imagesBase64.isEmpty()) {
+            recipe.setImagesBase64(imagesBase64);
+        }
+
+        // 🥗 Malzemeler
+        if (items != null) {
+            for (RecipeIngredient ri : items) {
+                if (ri.getIngredient() != null && ri.getIngredient().getId() != null) {
+                    Ingredient ing = ingredientRepository.findById(ri.getIngredient().getId())
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    "ingredient not found: " + ri.getIngredient().getId()));
+                    ri.setIngredient(ing);
+                }
+                recipe.addIngredient(ri);
             }
         }
 
@@ -112,5 +159,15 @@ public class RecipeService {
             r.setUpdatedAt(new Date());
             recipeRepository.save(r);
         });
+    }
+
+    /** 🍽️ Kategoriye göre tarifleri getir */
+    public List<Recipe> getByCategory(RecipeCategory category) {
+        return recipeRepository.findByCategory(category);
+    }
+
+    /** 👨‍🍳 Şefe göre tarifleri getir */
+    public List<Recipe> getByAuthor(Long authorId) {
+        return recipeRepository.findByAuthorId(authorId);
     }
 }

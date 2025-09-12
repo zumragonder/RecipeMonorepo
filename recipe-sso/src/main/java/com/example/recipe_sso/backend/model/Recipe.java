@@ -12,6 +12,8 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -51,6 +53,11 @@ public class Recipe {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
+    // 🍽️ Kategori alanı (ör: TATLI, TUZLU, VEGAN, ICECEK)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false, length = 30)
+    private RecipeCategory category;
+
     @Column(name = "rating_avg", precision = 6, scale = 3)
     private BigDecimal ratingAvg = BigDecimal.ZERO;
 
@@ -67,6 +74,14 @@ public class Recipe {
 
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecipeIngredient> ingredients = new ArrayList<>();
+
+    // ❤️ Beğeniler
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RecipeLike> likes = new ArrayList<>();
+
+    // 💬 Yorumlar
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RecipeComment> comments = new ArrayList<>();
 
     // ---- Getter/Setter ----
     public Long getId() { return id; }
@@ -85,6 +100,9 @@ public class Recipe {
 
     public User getAuthor() { return author; }
     public void setAuthor(User author) { this.author = author; }
+
+    public RecipeCategory getCategory() { return category; }
+    public void setCategory(RecipeCategory category) { this.category = category; }
 
     public BigDecimal getRatingAvg() { return ratingAvg; }
     public void setRatingAvg(BigDecimal ratingAvg) { this.ratingAvg = ratingAvg; }
@@ -105,4 +123,10 @@ public class Recipe {
         ri.setRecipe(this);
         this.ingredients.add(ri);
     }
+
+    public List<RecipeLike> getLikes() { return likes; }
+    public void setLikes(List<RecipeLike> likes) { this.likes = likes; }
+
+    public List<RecipeComment> getComments() { return comments; }
+    public void setComments(List<RecipeComment> comments) { this.comments = comments; }
 }

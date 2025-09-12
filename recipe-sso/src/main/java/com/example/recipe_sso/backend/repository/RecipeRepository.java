@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.recipe_sso.backend.model.Recipe;
+import com.example.recipe_sso.backend.model.RecipeCategory;
 
 public interface RecipeRepository extends JpaRepository<Recipe, Long> {
 
@@ -43,4 +44,10 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
       nativeQuery = true
     )
     Page<Recipe> suggestByIngredients(@Param("ingredientIds") List<Long> ingredientIds, Pageable pageable);
+
+    // ✅ Yeni eklenen method: kategoriye göre filtreleme
+    List<Recipe> findByCategory(RecipeCategory category);
+
+    // ✅ Yeni eklenen method: şefin (author) tariflerini bul
+    List<Recipe> findByAuthorId(Long authorId);
 }

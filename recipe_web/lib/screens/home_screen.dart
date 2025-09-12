@@ -33,18 +33,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🔹 Sol menüdeki butonları oluşturan fonksiyon
-  Widget _buildMenuButton(String text, IconData icon, Widget page) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 10),
+Widget _buildMenuButton(String text, IconData icon, Widget page) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 10),
+    child: Material( // ✅ InkWell için yüzey
+      color: Colors.transparent, // Arka plan saydam
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: () {
-          // Butona tıklanınca ilgili sayfaya git
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => page),
           );
         },
+        borderRadius: BorderRadius.circular(8),
+        splashColor: Colors.deepOrange.withOpacity(0.3), // 🔸 turuncu dalga
+        highlightColor: Colors.white.withOpacity(0.2),   // 🔸 hafif kararma
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
           decoration: BoxDecoration(
@@ -55,11 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: _isCollapsed
-              // Sidebar kapalıysa sadece ikon göster
               ? Center(
                   child: Icon(icon, color: Colors.white, size: 22),
                 )
-              // Açıkken ikon + yazı göster
               : Row(
                   children: [
                     Icon(icon, color: Colors.white, size: 20),
@@ -76,8 +78,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // 🔹 Tarif kartlarını oluşturan fonksiyon
   Widget _buildRecipeCard(
