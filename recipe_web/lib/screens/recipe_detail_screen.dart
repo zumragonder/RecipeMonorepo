@@ -15,6 +15,7 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   int _likeCount = 0;
   bool _liked = false;
+  bool _liking = false; // ✔️ aynı anda çift tıklamayı engellemek için
   List<dynamic> _comments = [];
   final _commentCtrl = TextEditingController();
 
@@ -25,33 +26,28 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     super.initState();
     _fetchLikes();
     _fetchComments();
-    _checkIfLiked();
   }
 
   bool _isLoggedIn() {
-    return _currentUser != null &&
-        _currentUser!.providerData.isNotEmpty &&
-        (_currentUser!.providerData[0].providerId == "google.com" ||
-            _currentUser!.providerData[0].providerId == "facebook.com");
+    final u = _currentUser;
+    if (u == null) return false;
+    final providers = u.providerData.map((p) => p.providerId).toSet();
+    return providers.contains('google.com') || providers.contains('facebook.com');
   }
 
   Future<void> _fetchLikes() async {
+    final email = _currentUser?.email ?? "";
     final res = await http.get(
-      Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/likes/count"),
+      Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/likes?email=$email"),
     );
     if (res.statusCode == 200) {
-      setState(() => _likeCount = jsonDecode(res.body));
-    }
-  }
-
-  Future<void> _checkIfLiked() async {
-    if (!_isLoggedIn()) return;
-    final email = _currentUser!.email;
-    final res = await http.get(
-      Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/likes/check?email=$email"),
-    );
-    if (res.statusCode == 200) {
-      setState(() => _liked = jsonDecode(res.body));
+      final data = jsonDecode(res.body);
+      setState(() {
+        _likeCount = (data["likeCount"] ?? data["count"] ?? 0) as int;
+        _liked = (data["liked"] ?? false) as bool;
+      });
+    } else {
+      log("⚠️ Likes fetch error: ${res.statusCode}");
     }
   }
 
@@ -62,38 +58,32 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       );
       return;
     }
+    if (_liking) return;
+    _liking = true;
 
-    final email = _currentUser!.email;
-    final res = await http.post(
-      Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/likes/toggle?email=$email"),
-    );
+    try {
+      final email = _currentUser!.email;
+      final res = await http.post(
+        Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/likes/toggle?email=$email"),
+      );
 
-    if (res.statusCode == 200) {
-      setState(() {
-        AlertDialog.adaptive(
-          title: const Text("Beğeni durumu değişti"),
-          content: Text(_liked ? "Beğeniniz kaldırıldı." : "Tarifi beğendiniz."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Tamam"),
-            ),
-          ],
+      if (res.statusCode == 200) {
+        final result = jsonDecode(res.body);
+        setState(() {
+          _liked = (result["liked"] ?? false) as bool;
+          _likeCount = (result["likeCount"] ?? result["count"] ?? 0) as int;
+        });
+      } else if (res.statusCode == 403) {
+        final msg = res.body.isNotEmpty ? res.body : "Beğeni reddedildi (403).";
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Beğeni başarısız (${res.statusCode}).")),
         );
-        final result = jsonDecode(res.body); 
-        _liked =result["liked"] as bool;
-        _likeCount = result["likeCount"] as int;
-       // _liked = result.contains("liked");
-      });
+      }
+    } finally {
+      _liking = false;
     }
-
-
-    // final res1 = await http.get(
-    //   Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/likes/count"),
-    // );
-    // if (res1.statusCode == 200) {
-    //   setState(() => _likeCount = jsonDecode(res1.body));
-    // }
   }
 
   Future<void> _fetchComments() async {
@@ -119,7 +109,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final email = _currentUser!.email;
     final res = await http.post(
       Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/comments?email=$email"),
-      headers: {"Content-Type": "text/plain"}, // düz text
+      headers: {"Content-Type": "text/plain"},
       body: text,
     );
 

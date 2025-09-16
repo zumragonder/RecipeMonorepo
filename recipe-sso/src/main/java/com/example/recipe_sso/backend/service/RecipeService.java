@@ -124,13 +124,22 @@ public class RecipeService {
         return recipeRepository.save(recipe);
     }
 
-    /** 📊 Malzeme önerisine göre tarifler */
+    /** 📊 Malzeme önerisine göre tarifler (en çok eşleşenleri bulur) */
     public Page<Recipe> suggestByIngredients(List<Long> ingredientIds, Pageable pageable) {
         if (ingredientIds == null || ingredientIds.isEmpty())
             return Page.empty(pageable);
         if (ingredientIds.size() > 10)
             throw new IllegalArgumentException("En fazla 10 malzeme seçilebilir.");
         return recipeRepository.suggestByIngredients(ingredientIds, pageable);
+    }
+
+    /** 📊 Tüm seçilen malzemeleri içeren tarifler */
+    public Page<Recipe> findByAllIngredients(List<Long> ingredientIds, Pageable pageable) {
+        if (ingredientIds == null || ingredientIds.isEmpty())
+            return Page.empty(pageable);
+        if (ingredientIds.size() > 10)
+            throw new IllegalArgumentException("En fazla 10 malzeme seçilebilir.");
+        return recipeRepository.findByAllIngredients(ingredientIds, ingredientIds.size(), pageable);
     }
 
     /** 🔎 Tarif arama */

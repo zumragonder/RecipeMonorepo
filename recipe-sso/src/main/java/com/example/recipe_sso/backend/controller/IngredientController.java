@@ -27,7 +27,7 @@ public class IngredientController {
 
     private final IngredientService ingredientService;
 
-    /** Autocomplete (içeren, A→Z) */
+    /** 🔍 Autocomplete (içeren, A→Z) */
     @GetMapping("/autocomplete")
     public List<IngredientDto> autocomplete(
             @RequestParam("q") @NotBlank String q,
@@ -37,7 +37,7 @@ public class IngredientController {
                 .toList();
     }
 
-    /** Tüm havuz (opsiyonel kategori filtresi, A→Z) */
+    /** 📋 Tüm havuz (opsiyonel kategori filtresi, A→Z) */
     @GetMapping("/all")
     public List<IngredientDto> all(@RequestParam(name = "category", required = false) String category) {
         Optional<IngredientCategory> cat = parseCategory(category);
@@ -47,7 +47,7 @@ public class IngredientController {
         return items.stream().map(IngredientDto::from).toList();
     }
 
-    /** Yeni malzeme ekle (case-insensitive, kategori destekli) */
+    /** ➕ Yeni malzeme ekle (case-insensitive, kategori destekli) */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody CreateIngredientReq req) {
         String name = req.name == null ? "" : req.name.trim();
@@ -55,14 +55,14 @@ public class IngredientController {
             return ResponseEntity.badRequest().body(new ErrorDto("name is blank"));
         }
 
-        // Aynı isim varsa 409 + mevcut kaydı döndür
+        // 🔎 Aynı isim varsa 409 + mevcut kaydı döndür
         Optional<Ingredient> existingOpt = ingredientService.findByNameIgnoreCase(name);
         if (existingOpt.isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new InfoDto("already_exists", IngredientDto.from(existingOpt.get())));
         }
 
-        // Kategori güvenli parse (gelmezse OTHER)
+        // ✅ Kategori parse (gelmezse OTHER)
         IngredientCategory category = parseCategory(req.category).orElse(IngredientCategory.OTHER);
 
         Ingredient saved = ingredientService.create(name, req.aliases, category);

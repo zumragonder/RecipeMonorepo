@@ -36,25 +36,42 @@ class _ChefsScreenState extends State<ChefsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Şefler"),
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: theme.colorScheme.primary,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _chefs.isEmpty
-              ? const Center(child: Text("Hiç şef bulunamadı"))
+              ? Center(
+                  child: Text(
+                    "Hiç şef bulunamadı",
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                )
               : ListView.builder(
                   itemCount: _chefs.length,
                   itemBuilder: (context, index) {
                     final chef = _chefs[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      color: theme.cardColor,
                       child: ListTile(
-                        leading: const Icon(Icons.person, color: Colors.deepOrange),
-                        title: Text(chef["name"] ?? chef["email"]),
-                        subtitle: Text(chef["email"] ?? ""),
+                        leading: Icon(
+                          Icons.person,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(
+                          chef["name"] ?? chef["email"],
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        subtitle: Text(
+                          chef["email"] ?? "",
+                          style: theme.textTheme.bodySmall,
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,

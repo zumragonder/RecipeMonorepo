@@ -43,27 +43,39 @@ class _ChefRecipesScreenState extends State<ChefRecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text("${widget.chefName} Tarifleri"),
-        backgroundColor: Colors.deepOrange,
+        backgroundColor: theme.colorScheme.primary,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _recipes.isEmpty
-              ? const Center(child: Text("Bu şefin henüz tarifi yok"))
+              ? Center(
+                  child: Text(
+                    "Bu şefin henüz tarifi yok",
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                )
               : ListView.builder(
                   itemCount: _recipes.length,
                   itemBuilder: (context, index) {
                     final recipe = _recipes[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      color: theme.cardColor,
                       child: ListTile(
-                        title: Text(recipe["title"] ?? "Başlıksız"),
+                        title: Text(
+                          recipe["title"] ?? "Başlıksız",
+                          style: theme.textTheme.bodyMedium,
+                        ),
                         subtitle: Text(
                           (recipe["description"] ?? "").length > 50
                               ? recipe["description"].substring(0, 50) + "..."
                               : recipe["description"] ?? "",
+                          style: theme.textTheme.bodySmall,
                         ),
                         onTap: () {
                           Navigator.push(

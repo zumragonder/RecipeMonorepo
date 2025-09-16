@@ -43,7 +43,7 @@ public class RecipeController {
     @GetMapping("/{id}")
     public ResponseEntity<RecipeDto> get(@PathVariable Long id) {
         return recipeService.get(id)
-                .map(r -> ResponseEntity.ok(RecipeDto.fromEntity(r)))
+                .map(r -> ResponseEntity.ok(RecipeDto.fromEntity(r, likeRepo.countByRecipeId(r.getId()))))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -91,16 +91,26 @@ public class RecipeController {
             );
         }
 
-        return ResponseEntity.ok(RecipeDto.fromEntity(recipe));
+        long likeCount = likeRepo.countByRecipeId(recipe.getId());
+        return ResponseEntity.ok(RecipeDto.fromEntity(recipe, likeCount));
     }
 
-    /** 📊 Malzemelere göre önerilen tarifler */
+    /** 📊 Malzemelere göre önerilen tarifler (en çok eşleşen) */
     @GetMapping("/suggest")
     public Page<RecipeDto> suggest(@RequestParam List<Long> ingredientIds,
                                    @RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "20") int size) {
         return recipeService.suggestByIngredients(ingredientIds, PageRequest.of(page, size))
-                .map(RecipeDto::fromEntity);
+                .map(r -> RecipeDto.fromEntity(r, likeRepo.countByRecipeId(r.getId())));
+    }
+
+    /** 📊 Tüm seçilen malzemeleri içeren tarifler */
+    @GetMapping("/suggestAll")
+    public Page<RecipeDto> suggestAll(@RequestParam List<Long> ingredientIds,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "20") int size) {
+        return recipeService.findByAllIngredients(ingredientIds, PageRequest.of(page, size))
+                .map(r -> RecipeDto.fromEntity(r, likeRepo.countByRecipeId(r.getId())));
     }
 
     /** 🔎 Arama */
@@ -110,7 +120,7 @@ public class RecipeController {
                                   @RequestParam(defaultValue = "0") int page,
                                   @RequestParam(defaultValue = "20") int size) {
         return recipeService.search(name, minRating, PageRequest.of(page, size))
-                .map(RecipeDto::fromEntity);
+                .map(r -> RecipeDto.fromEntity(r, likeRepo.countByRecipeId(r.getId())));
     }
 
     /** 🍽️ Kategoriye göre tarifleri getir */
@@ -118,7 +128,7 @@ public class RecipeController {
     public List<RecipeDto> getByCategory(@PathVariable RecipeCategory category) {
         return recipeService.getByCategory(category)
                 .stream()
-                .map(RecipeDto::fromEntity)
+                .map(r -> RecipeDto.fromEntity(r, likeRepo.countByRecipeId(r.getId())))
                 .toList();
     }
 
@@ -127,70 +137,88 @@ public class RecipeController {
     public List<RecipeDto> getByAuthor(@PathVariable Long authorId) {
         return recipeService.getByAuthor(authorId)
                 .stream()
-                .map(RecipeDto::fromEntity)
+                .map(r -> RecipeDto.fromEntity(r, likeRepo.countByRecipeId(r.getId())))
                 .toList();
     }
 
-// ❤️ BEĞENİLER
-@GetMapping("/{id}/likes/check")
-public boolean checkLike(@PathVariable Long id, @RequestParam String email) {
-    var user = userRepo.findByEmail(email).orElse(null);
-    if (user == null) return false;
-    return likeRepo.existsByRecipeIdAndUserId(id, user.getId());
-}
-
-@Transactional
-@PostMapping("/{id}/likes/toggle")
-public ResponseEntity<RecipeLikeResponse> toggleLike(
-        @PathVariable Long id,
-        @RequestParam String email) {
-
-    var user = userRepo.findByEmail(email).orElse(null);
-    if (user == null) {
-        var res = new RecipeLikeResponse(false, 0, id, "Anonim kullanıcı beğeni atamaz");
-        return ResponseEntity.status(403).body(res);
+    // ❤️ BEĞENİLER (değişmedi)
+    @GetMapping("/{id}/likes/check")
+    public boolean checkLike(@PathVariable Long id, @RequestParam String email) {
+        var user = userRepo.findByEmail(email).orElse(null);
+        if (user == null) return false;
+        return likeRepo.existsByRecipeIdAndUserId(id, user.getId());
     }
 
-    if (likeRepo.existsByRecipeIdAndUserId(id, user.getId())) {
-        // 👍 Beğeniyi kaldır
-        likeRepo.deleteByRecipeIdAndUserId(id, user.getId());
-        var count = likeRepo.countByRecipeId(id);
-        var res = new RecipeLikeResponse(false, count, id, "");
-        return ResponseEntity.ok(res);
+    @Transactional
+    @PostMapping("/{id}/likes/toggle")
+    public ResponseEntity<RecipeLikeResponse> toggleLike(
+            @PathVariable Long id,
+            @RequestParam String email) {
 
-    } else {
-        // ❤️ Yeni beğeni ekle
+        var user = userRepo.findByEmail(email).orElse(null);
+        if (user == null) {
+            var res = new RecipeLikeResponse(false, 0, id, "Anonim kullanıcı beğeni atamaz");
+            return ResponseEntity.status(403).body(res);
+        }
+
+        if (likeRepo.existsByRecipeIdAndUserId(id, user.getId())) {
+            likeRepo.deleteByRecipeIdAndUserId(id, user.getId());
+            var count = likeRepo.countByRecipeId(id);
+            var res = new RecipeLikeResponse(false, count, id, "");
+            return ResponseEntity.ok(res);
+
+        } else {
+            var recipe = recipeService.get(id).orElseThrow();
+            var like = new com.example.recipe_sso.backend.model.RecipeLike();
+            like.setRecipe(recipe);
+            like.setUser(user);
+            likeRepo.save(like);
+
+            var count = likeRepo.countByRecipeId(id);
+            var res = new RecipeLikeResponse(true, count, id, "");
+            return ResponseEntity.ok(res);
+        }
+    }
+
+    @GetMapping("/{id}/likes")
+    public ResponseEntity<RecipeLikeResponse> getLikes(
+            @PathVariable Long id,
+            @RequestParam(required = false) String email) {
+
+        var user = (email == null || email.isBlank())
+                ? null
+                : userRepo.findByEmail(email).orElse(null);
+
+        boolean liked = false;
+        if (user != null) {
+            liked = likeRepo.existsByRecipeIdAndUserId(id, user.getId());
+        }
+
+        long count = likeRepo.countByRecipeId(id);
+
+        var res = new RecipeLikeResponse(liked, count, id, "");
+        return ResponseEntity.ok(res);
+    }
+
+    // 💬 YORUMLAR (değişmedi)
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<?> addComment(@PathVariable Long id,
+                                        @RequestParam String email,
+                                        @RequestBody String text) {
+        var user = userRepo.findByEmail(email).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(403).body("Anonim kullanıcı yorum atamaz");
+        }
+
         var recipe = recipeService.get(id).orElseThrow();
-        var like = new com.example.recipe_sso.backend.model.RecipeLike();
-        like.setRecipe(recipe);
-        like.setUser(user);
-        likeRepo.save(like);
+        var c = new RecipeComment();
+        c.setRecipe(recipe);
+        c.setUser(user);
+        c.setText(text);
 
-        var count = likeRepo.countByRecipeId(id);
-        var res = new RecipeLikeResponse(true, count, id, "");  // 🔴 Burada true olacak
-        return ResponseEntity.ok(res);
+        var saved = commentRepo.save(c);
+        return ResponseEntity.ok(CommentDto.fromEntity(saved));
     }
-}
-
-// 💬 YORUMLAR
-@PostMapping("/{id}/comments")
-public ResponseEntity<?> addComment(@PathVariable Long id,
-                                    @RequestParam String email,
-                                    @RequestBody String text) {
-    var user = userRepo.findByEmail(email).orElse(null);
-    if (user == null) {
-        return ResponseEntity.status(403).body("Anonim kullanıcı yorum atamaz");
-    }
-
-    var recipe = recipeService.get(id).orElseThrow();
-    var c = new RecipeComment();
-    c.setRecipe(recipe);
-    c.setUser(user);
-    c.setText(text);
-
-    var saved = commentRepo.save(c);
-    return ResponseEntity.ok(CommentDto.fromEntity(saved));
-}
 
     // ---- DTO’lar ----
     public static class RecipeDto {
@@ -202,8 +230,9 @@ public ResponseEntity<?> addComment(@PathVariable Long id,
         public String imageBase64;
         public List<String> imagesBase64;
         public List<IngredientLineDto> ingredients = new ArrayList<>();
+        public long likeCount;
 
-        public static RecipeDto fromEntity(Recipe r) {
+        public static RecipeDto fromEntity(Recipe r, long likeCount) {
             RecipeDto dto = new RecipeDto();
             dto.id = r.getId();
             dto.title = r.getTitle();
@@ -212,6 +241,7 @@ public ResponseEntity<?> addComment(@PathVariable Long id,
             dto.category = r.getCategory() != null ? r.getCategory().name() : null;
             dto.imageBase64 = r.getImageBase64();
             dto.imagesBase64 = r.getImagesBase64();
+            dto.likeCount = likeCount;
 
             if (r.getIngredients() != null) {
                 for (RecipeIngredient ri : r.getIngredients()) {

@@ -50,4 +50,33 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
 
     // ✅ Yeni eklenen method: şefin (author) tariflerini bul
     List<Recipe> findByAuthorId(Long authorId);
+
+        // ✅ Tüm seçilen malzemeleri içeren tarifler
+    @Query(
+      value = """
+        SELECT r.*
+        FROM recipes r
+        JOIN recipe_ingredient ri ON ri.recipe_id = r.id
+        WHERE ri.ingredient_id IN (:ingredientIds)
+        GROUP BY r.id
+        HAVING COUNT(DISTINCT ri.ingredient_id) = :ingredientCount
+        ORDER BY r.rating_avg DESC NULLS LAST
+      """,
+      countQuery = """
+        SELECT COUNT(*) FROM (
+          SELECT r.id
+          FROM recipes r
+          JOIN recipe_ingredient ri ON ri.recipe_id = r.id
+          WHERE ri.ingredient_id IN (:ingredientIds)
+          GROUP BY r.id
+          HAVING COUNT(DISTINCT ri.ingredient_id) = :ingredientCount
+        ) t
+      """,
+      nativeQuery = true
+    )
+    Page<Recipe> findByAllIngredients(
+        @Param("ingredientIds") List<Long> ingredientIds,
+        @Param("ingredientCount") long ingredientCount,
+        Pageable pageable
+    );
 }

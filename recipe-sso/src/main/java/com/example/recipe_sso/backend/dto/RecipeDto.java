@@ -13,8 +13,15 @@ public class RecipeDto {
     public String authorEmail;
     public Date createdAt;
     public List<RecipeIngredientDto> ingredients;
+    public long likeCount; // ✔️ eklendi
 
+    // ✔️ Eski kullanım için (likeCount olmadan)
     public static RecipeDto fromEntity(Recipe r) {
+        return fromEntity(r, 0L);
+    }
+
+    // ✔️ Yeni kullanım (likeCount ile)
+    public static RecipeDto fromEntity(Recipe r, long likeCount) {
         RecipeDto dto = new RecipeDto();
         dto.id = r.getId();
         dto.title = r.getTitle();
@@ -25,6 +32,7 @@ public class RecipeDto {
             .stream()
             .map(RecipeIngredientDto::fromEntity)
             .collect(Collectors.toList());
+        dto.likeCount = likeCount; // ✔️ set edildi
         return dto;
     }
 }
