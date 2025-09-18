@@ -13,34 +13,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     bool isDark = themeNotifier.value == ThemeMode.dark; // Tema durumunu kontrol et
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Ayarlar"),
-        backgroundColor: Colors.deepOrange,
+  return Scaffold(
+  appBar: AppBar(
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    elevation: 0,
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back, color: Colors.deepOrange),
+      onPressed: () => Navigator.pop(context),
+    ),
+    centerTitle: true,
+    title: const Text(
+      "Ayarlar",
+      style: TextStyle(
+        color: Colors.deepOrange,
+        fontWeight: FontWeight.bold,
       ),
-      body: ListView(
-        children: [
-          // 🔹 Tema değiştirme switch
-          SwitchListTile(
-            title: const Text("Koyu Tema"),
-            value: isDark,
-            activeColor: Colors.deepOrange,
-            onChanged: (val) {
-              setState(() {
-                themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
-              });
-            },
-          ),
-
-          const Divider(),
-
-          // 🔹 Hakkında kısmı
-          const ListTile(
-            title: Text("Hakkında"),
-            subtitle: Text("Tarif Dünyası v1.0.0\nGeliştirici: Zumra"),
-          ),
-        ],
+    ),
+  ),
+  body: ListView(
+    children: [
+      SwitchListTile(
+        title: const Text("Koyu Tema"),
+        value: isDark,
+        activeColor: Colors.deepOrange,
+        onChanged: (val) {
+          setState(() {
+            themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
+          });
+        },
       ),
-    );
+      const Divider(),
+      const ListTile(
+        title: Text("Hakkında"),
+        subtitle: Text("Tarif Dünyası v1.0.0\nGeliştirici: Zümra Gönder"),
+      ),
+    ],
+  ),
+);
+
   }
 }

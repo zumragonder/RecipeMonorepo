@@ -20,8 +20,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isCollapsed = false; // 🔹 Sidebar açık/kapalı durumunu takip eder
-
   List<dynamic> _recipes = []; // ✔️ backend’den gelecek tarif listesi
 
   @override
@@ -30,17 +28,19 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchRecipes();
   }
 
-  Future<void> _fetchRecipes() async {
-    final res = await http.get(
-      Uri.parse("http://localhost:8080/api/recipes?page=0&size=4"), // ilk 4 tarif
-    );
-    if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      setState(() {
-        _recipes = data["content"]; // Page<RecipeDto> JSON’undaki content
-      });
-    }
+ Future<void> _fetchRecipes() async {
+  final res = await http.get(
+    Uri.parse("http://localhost:8080/api/recipes?page=0&size=16&sort=likeCount,desc"), // en çok beğeni alan 15 tarif
+  );
+  if (res.statusCode == 200) {
+    final data = jsonDecode(res.body);
+    setState(() {
+      _recipes = List<Map<String, dynamic>>.from(data["content"]);
+      // 🔹 likes’a göre sıralama (büyükten küçüğe)
+      _recipes.sort((a, b) => (b["likeCount"] ?? 0).compareTo(a["likeCount"] ?? 0));
+    });
   }
+}
 
   // 🔹 Çıkış yapma fonksiyonu
   void _signOut() async {
@@ -53,46 +53,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMenuButton(String text, IconData icon, Widget page) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 10),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => page),
-            );
-          },
-          borderRadius: BorderRadius.circular(8),
-          splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-          highlightColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Theme.of(context).dividerColor,
-                width: 1.5,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
+        ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => page),
+          );
+        },
+        icon: Icon(icon, size: 18),
+        label: Text(
+          text,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: _isCollapsed
-                ? Center(
-                    child: Icon(icon, color: Theme.of(context).iconTheme.color, size: 22),
-                  )
-                : Row(
-                    children: [
-                      Icon(icon, color: Theme.of(context).iconTheme.color, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        text,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-          ),
         ),
       ),
     );
@@ -188,24 +165,25 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
+      body: Column(
         children: [
-          // 🔹 Sol Sidebar
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: _isCollapsed ? 60 : 200,
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: ListView(
+          // 🔹 Üst menü bar
+          Material(
+            elevation: 4,
+            child: Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              height: 60,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Sol: Menü butonları
+                  Row(
                     children: [
                       _buildMenuButton("Tarifler", Icons.restaurant, const RecipesScreen()),
                       _buildMenuButton("Malzemeler", Icons.shopping_basket, const IngredientsScreen()),
                       _buildMenuButton("Şefler", Icons.person, const ChefsScreen()),
                       _buildMenuButton("Ayarlar", Icons.settings, const SettingsScreen()),
-
                       if (FirebaseAuth.instance.currentUser != null &&
                           FirebaseAuth.instance.currentUser!.providerData.isNotEmpty &&
                           (FirebaseAuth.instance.currentUser!.providerData[0].providerId == "google.com" ||
@@ -213,53 +191,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildMenuButton("Tarif Ekle", Icons.add, const AddRecipeScreen()),
                     ],
                   ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    _isCollapsed ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
-                    color: Theme.of(context).iconTheme.color,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isCollapsed = !_isCollapsed;
-                    });
-                  },
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    onTap: _signOut,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.redAccent, width: 1.2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: _isCollapsed
-                          ? const Icon(Icons.logout, color: Colors.redAccent, size: 20)
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.logout, color: Colors.redAccent, size: 16),
-                                SizedBox(width: 6),
-                                Text(
-                                  "Çıkış",
-                                  style: TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  // Sağ: Çıkış butonu
+                  OutlinedButton.icon(
+                    onPressed: _signOut,
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    label: const Text(
+                      "Çıkış",
+                      style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
-          // 🔹 Sağ içerik alanı
+          // 🔹 İçerik
           Expanded(
             child: Container(
               color: Theme.of(context).scaffoldBackgroundColor,
@@ -267,21 +213,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(20),
                 child: ListView(
                   children: [
-                    Text(
+                   Text(
                       "Haftanın Favorileri",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                            color: Colors.deepOrange, // turuncu renk
                           ),
-                    ),
+                        ),
                     const SizedBox(height: 20),
 
-                    GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 300, // her kart max 300px genişlik
+                   GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4, // 🔹 her satırda 4 tane
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
-                        childAspectRatio: 2 / 1, // mevcut oranınızı koruyor
+                        childAspectRatio: 2 / 1, // 🔹 en-boy oranı (genişlik/yükseklik)
                       ),
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -290,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         final recipe = _recipes[index];
                         return _buildRecipeCard(
                           recipe["title"] ?? "Tarif",
-                          recipe["imageBase64"], // varsa görsel
+                          recipe["imageBase64"],
                           recipe["likeCount"] ?? 0,
                           recipe,
                         );

@@ -10,11 +10,14 @@ class IngredientsScreen extends StatefulWidget {
   State<IngredientsScreen> createState() => _IngredientsScreenState();
 }
 
-class _IngredientsScreenState extends State<IngredientsScreen> {
+class _IngredientsScreenState extends State<IngredientsScreen>
+    with SingleTickerProviderStateMixin {
   String _selectedCategory = "OTHER";
   List<dynamic> _ingredients = [];
   List<dynamic> _selectedIngredients = [];
   List<dynamic> _recipes = [];
+
+  late TabController _tabController;
 
   final categories = [
     {"key": "MEAT", "label": "Et"},
@@ -33,6 +36,14 @@ class _IngredientsScreenState extends State<IngredientsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: categories.length, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      setState(() {
+        _selectedCategory = categories[_tabController.index]["key"]!;
+      });
+      _fetchIngredients();
+    });
     _fetchIngredients();
   }
 
@@ -74,133 +85,129 @@ class _IngredientsScreenState extends State<IngredientsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // 👈 Tema bilgisi
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Malzemeler"),
-        backgroundColor: theme.colorScheme.primary,
+    return DefaultTabController(
+      length: categories.length,
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.deepOrange),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Malzemeler",
+          style: TextStyle(
+            color: Colors.deepOrange,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          indicatorColor: Colors.deepOrange,
+          labelColor: Colors.deepOrange,
+          unselectedLabelColor: theme.brightness == Brightness.light
+              ? Colors.black87   // açık temada siyah
+              : Colors.white70,  // koyu temada gri
+          labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          tabs: categories
+              .map((cat) => Tab(text: cat["label"] as String))
+              .toList(),
+        ),
       ),
-      body: Column(
-        children: [
-          // 🔹 Kategoriler
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: categories.map((cat) {
-                final isSelected = _selectedCategory == cat["key"];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ChoiceChip(
-                    label: Text(
-                      cat["label"]!,
-                      style: TextStyle(
-                        color: isSelected
-                            ? theme.colorScheme.onPrimary
-                            : theme.textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                    selected: isSelected,
-                    selectedColor: theme.colorScheme.primary,
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedCategory = cat["key"]!;
-                      });
-                      _fetchIngredients();
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          Divider(color: theme.dividerColor),
-
-          // 🔹 Malzemeler listesi
-          Expanded(
-            child: ListView.builder(
-              itemCount: _ingredients.length,
-              itemBuilder: (context, index) {
-                final ing = _ingredients[index];
-                final isSelected = _selectedIngredients.contains(ing);
-                return ListTile(
-                  title: Text(
-                    ing["name"],
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  trailing: Checkbox(
-                    value: isSelected,
-                    onChanged: (val) {
-                      _toggleIngredient(ing, val ?? false);
-                    },
-                  ),
-                  onTap: () {
-                    _toggleIngredient(ing, !isSelected);
-                  },
-                );
-              },
-            ),
-          ),
-
-          // 🔹 Seçilenler
-          Wrap(
-            spacing: 6,
-            children: _selectedIngredients
-                .map((ing) => Chip(
-                      label: Text(ing["name"]),
-                      onDeleted: () {
-                        setState(() {
-                          _selectedIngredients.remove(ing);
-                        });
-                      },
-                      backgroundColor: theme.chipTheme.backgroundColor,
-                      labelStyle: theme.textTheme.bodyMedium,
-                    ))
-                .toList(),
-          ),
-
-          // 🔹 Tarifler listesi
-          if (_recipes.isNotEmpty) ...[
-            Divider(color: theme.dividerColor),
+        body: Column(
+          children: [
+            // 🔹 Malzemeler listesi
             Expanded(
               child: ListView.builder(
-                itemCount: _recipes.length,
+                itemCount: _ingredients.length,
                 itemBuilder: (context, index) {
-                  final recipe = _recipes[index];
+                  final ing = _ingredients[index];
+                  final isSelected = _selectedIngredients.contains(ing);
                   return ListTile(
                     title: Text(
-                      recipe["title"],
+                      ing["name"],
                       style: theme.textTheme.bodyMedium,
                     ),
+                    trailing: Checkbox(
+                      value: isSelected,
+                      onChanged: (val) {
+                        _toggleIngredient(ing, val ?? false);
+                      },
+                    ),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RecipeDetailScreen(recipe: recipe),
-                        ),
-                      );
+                      _toggleIngredient(ing, !isSelected);
                     },
                   );
                 },
               ),
             ),
-          ],
 
-          // 🔹 Ara butonu
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.search),
-              label: const Text("Tarifleri Ara"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-              ),
-              onPressed: _searchRecipes,
+            // 🔹 Seçilenler
+            Wrap(
+              spacing: 6,
+              children: _selectedIngredients
+                  .map((ing) => Chip(
+                        label: Text(ing["name"]),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedIngredients.remove(ing);
+                          });
+                        },
+                        backgroundColor: theme.chipTheme.backgroundColor,
+                        labelStyle: theme.textTheme.bodyMedium,
+                      ))
+                  .toList(),
             ),
-          ),
-        ],
+
+            // 🔹 Tarifler listesi
+            if (_recipes.isNotEmpty) ...[
+              Divider(color: theme.dividerColor),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _recipes.length,
+                  itemBuilder: (context, index) {
+                    final recipe = _recipes[index];
+                    return ListTile(
+                      title: Text(
+                        recipe["title"],
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RecipeDetailScreen(recipe: recipe),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+
+            // 🔹 Ara butonu
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.search),
+                label: const Text("Tarifleri Ara"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                ),
+                onPressed: _searchRecipes,
+              ),
+            ),
+          ],
+        ),
       ),
-      backgroundColor: theme.scaffoldBackgroundColor,
     );
   }
 }

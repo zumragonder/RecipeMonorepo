@@ -51,7 +51,7 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     // ✅ Yeni eklenen method: şefin (author) tariflerini bul
     List<Recipe> findByAuthorId(Long authorId);
 
-        // ✅ Tüm seçilen malzemeleri içeren tarifler
+    // ✅ Tüm seçilen malzemeleri içeren tarifler
     @Query(
       value = """
         SELECT r.*
@@ -79,4 +79,8 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
         @Param("ingredientCount") long ingredientCount,
         Pageable pageable
     );
+
+    // ✅ Beğeni sayısına göre çoktan aza sıralama (Haftanın Favorileri)
+    @Query("SELECT r FROM Recipe r LEFT JOIN r.likes l GROUP BY r.id ORDER BY COUNT(l) DESC")
+    List<Recipe> findAllOrderByLikeCountDesc();
 }

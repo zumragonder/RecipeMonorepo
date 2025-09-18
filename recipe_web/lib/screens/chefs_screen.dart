@@ -40,8 +40,20 @@ class _ChefsScreenState extends State<ChefsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Şefler"),
-        backgroundColor: theme.colorScheme.primary,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.deepOrange),
+          onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: true,
+        title: const Text(
+          "Şefler",
+          style: TextStyle(
+            color: Colors.deepOrange,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -57,7 +69,8 @@ class _ChefsScreenState extends State<ChefsScreen> {
                   itemBuilder: (context, index) {
                     final chef = _chefs[index];
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      margin:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       color: theme.cardColor,
                       child: ListTile(
                         leading: Icon(
@@ -70,7 +83,11 @@ class _ChefsScreenState extends State<ChefsScreen> {
                         ),
                         subtitle: Text(
                           chef["email"] ?? "",
-                          style: theme.textTheme.bodySmall,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.white70 // koyu temada açık gri
+                                : Colors.black87, // açık temada siyah
+                          ),
                         ),
                         onTap: () {
                           Navigator.push(

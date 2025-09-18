@@ -47,8 +47,20 @@ class _ChefRecipesScreenState extends State<ChefRecipesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("${widget.chefName} Tarifleri"),
-        backgroundColor: theme.colorScheme.primary,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.deepOrange),
+          onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: true,
+        title: Text(
+          "${widget.chefName} Tarifleri",
+          style: const TextStyle(
+            color: Colors.deepOrange,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -69,13 +81,18 @@ class _ChefRecipesScreenState extends State<ChefRecipesScreen> {
                       child: ListTile(
                         title: Text(
                           recipe["title"] ?? "Başlıksız",
-                          style: theme.textTheme.bodyMedium,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface, // ✨ koyu temada beyaz, açık temada siyah
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         subtitle: Text(
                           (recipe["description"] ?? "").length > 50
                               ? recipe["description"].substring(0, 50) + "..."
                               : recipe["description"] ?? "",
-                          style: theme.textTheme.bodySmall,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.7), // ✨ daha açık ton
+                          ),
                         ),
                         onTap: () {
                           Navigator.push(

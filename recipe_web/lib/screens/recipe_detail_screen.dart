@@ -15,9 +15,7 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   int _likeCount = 0;
   bool _liked = false;
-  bool _liking = false; // ✔️ aynı anda çift tıklamayı engellemek için
-  List<dynamic> _comments = [];
-  final _commentCtrl = TextEditingController();
+  bool _liking = false;
 
   User? get _currentUser => FirebaseAuth.instance.currentUser;
 
@@ -25,7 +23,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   void initState() {
     super.initState();
     _fetchLikes();
-    _fetchComments();
   }
 
   bool _isLoggedIn() {
@@ -86,54 +83,35 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     }
   }
 
-  Future<void> _fetchComments() async {
-    final res = await http.get(
-      Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/comments"),
-    );
-    if (res.statusCode == 200) {
-      setState(() => _comments = jsonDecode(res.body));
-    }
-  }
-
-  Future<void> _addComment() async {
-    if (!_isLoggedIn()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Yorum yapmak için giriş yapmalısınız.")),
-      );
-      return;
-    }
-
-    final text = _commentCtrl.text.trim();
-    if (text.isEmpty) return;
-
-    final email = _currentUser!.email;
-    final res = await http.post(
-      Uri.parse("http://localhost:8080/api/recipes/${widget.recipe["id"]}/comments?email=$email"),
-      headers: {"Content-Type": "text/plain"},
-      body: text,
-    );
-
-    if (res.statusCode == 200) {
-      _commentCtrl.clear();
-      _fetchComments();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final recipe = widget.recipe;
     final ingredients = recipe["ingredients"] as List? ?? [];
     final images = (recipe["imagesBase64"] as List?)?.cast<String>() ?? [];
     log("image: $images");
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(recipe["title"] ?? "Tarif"),
-        backgroundColor: Colors.deepOrange,
+  appBar: AppBar(
+    backgroundColor: theme.scaffoldBackgroundColor,
+    elevation: 0,
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back, color: Colors.deepOrange),
+      onPressed: () => Navigator.pop(context),
+    ),
+    centerTitle: true,
+    title: Text(
+      recipe["title"] ?? "Tarif Detayı",
+      style: const TextStyle(
+        color: Colors.deepOrange,
+        fontWeight: FontWeight.bold,
       ),
-      body: Scrollbar(
-        thumbVisibility: true,
-        child: SingleChildScrollView(
+    ),
+  ),
+  body: Scrollbar(
+    thumbVisibility: true,
+    child: SingleChildScrollView(
+      // ...
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,13 +145,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   height: 220,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey[800],
+                    color: theme.dividerColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
-                    child: Icon(Icons.image_not_supported,
-                        size: 50, color: Colors.white54),
-                  ),
+                  child: Icon(Icons.image_not_supported,
+                      size: 50, color: theme.iconTheme.color?.withOpacity(0.6)),
                 ),
 
               const SizedBox(height: 16),
@@ -184,28 +160,23 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     "Ekleyen: ${recipe["authorEmail"]}",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.white70,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
                   ),
                 ),
 
               // 📖 Tarif açıklaması
               Text(
                 recipe["description"] ?? "",
-                style: const TextStyle(fontSize: 16, color: Colors.white),
+                style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
 
-              // 🥗 Malzemeler
-              const Text(
+              // 🥗 Malzemeler (turuncu)
+              Text(
                 "Malzemeler",
-                style: TextStyle(
-                  fontSize: 18,
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.deepOrange, // turuncu
                 ),
               ),
               const SizedBox(height: 8),
@@ -214,18 +185,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Text(
                         "- ${ing["amount"]} ${ing["unit"]} ${ing["name"]}",
-                        style: const TextStyle(
-                            fontSize: 15, color: Colors.white),
+                        style: theme.textTheme.bodyMedium,
                       ),
                     ))
               else
-                const Text(
-                  "Hiç malzeme eklenmemiş.",
-                  style: TextStyle(fontSize: 15, color: Colors.white70),
-                ),
+                Text("Hiç malzeme eklenmemiş.",
+                    style: theme.textTheme.bodySmall),
 
               const SizedBox(height: 24),
-              const Divider(color: Colors.white30),
+              Divider(color: theme.dividerColor),
 
               // ❤️ Beğeni
               Row(
@@ -237,64 +205,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     ),
                     onPressed: _isLoggedIn() ? _toggleLike : null,
                   ),
-                  Text("$_likeCount beğeni",
-                      style: const TextStyle(color: Colors.white)),
+                  Text("$_likeCount beğeni", style: theme.textTheme.bodyMedium),
                 ],
               ),
-
-              const Divider(color: Colors.white30),
-
-              // 💬 Yorumlar
-              const Text("Yorumlar",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
-              const SizedBox(height: 8),
-              if (_comments.isEmpty)
-                const Text("Henüz yorum yok.",
-                    style: TextStyle(color: Colors.white70))
-              else
-                ..._comments.map((c) => ListTile(
-                      title: Text(c["userEmail"] ?? "Anonim",
-                          style: const TextStyle(color: Colors.white)),
-                      subtitle: Text(c["text"],
-                          style: const TextStyle(color: Colors.white70)),
-                    )),
-
-              const SizedBox(height: 12),
-
-              // ✍️ Yorum yaz
-              if (_isLoggedIn())
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _commentCtrl,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: "Yorum yaz...",
-                          hintStyle: TextStyle(color: Colors.white54),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.send, color: Colors.deepOrange),
-                      onPressed: _addComment,
-                    )
-                  ],
-                )
-              else
-                const Text(
-                  "Yorum yapmak için giriş yapın.",
-                  style: TextStyle(color: Colors.orange),
-                ),
             ],
           ),
         ),
       ),
-      backgroundColor: const Color(0xFF222020),
     );
   }
 
