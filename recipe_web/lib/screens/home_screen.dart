@@ -223,25 +223,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 20),
 
                    GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4, // 🔹 her satırda 4 tane
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 2 / 1, // 🔹 en-boy oranı (genişlik/yükseklik)
-                      ),
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _recipes.length,
-                      itemBuilder: (context, index) {
-                        final recipe = _recipes[index];
-                        return _buildRecipeCard(
-                          recipe["title"] ?? "Tarif",
-                          recipe["imageBase64"],
-                          recipe["likeCount"] ?? 0,
-                          recipe,
-                        );
-                      },
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: (MediaQuery.of(context).size.width ~/ 250).clamp(1, 4), 
+                      // ekran genişliğine göre otomatik ayarlanır
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 2 / 1,
                     ),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _recipes.length,
+                    itemBuilder: (context, index) {
+                      final recipe = _recipes[index];
+                      return _buildRecipeCard(
+                        recipe["title"] ?? "Tarif",
+                        recipe["imageBase64"],
+                        recipe["likeCount"] ?? 0,
+                        recipe,
+                      );
+                    },
+                  ),
                   ],
                 ),
               ),
