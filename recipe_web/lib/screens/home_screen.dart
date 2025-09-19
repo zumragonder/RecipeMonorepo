@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // 🔹 Üst menü bar
+         // 🔹 Üst menü bar
           Material(
             elevation: 4,
             child: Container(
@@ -178,18 +178,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Sol: Menü butonları
-                  Row(
-                    children: [
-                      _buildMenuButton("Tarifler", Icons.restaurant, const RecipesScreen()),
-                      _buildMenuButton("Malzemeler", Icons.shopping_basket, const IngredientsScreen()),
-                      _buildMenuButton("Şefler", Icons.person, const ChefsScreen()),
-                      _buildMenuButton("Ayarlar", Icons.settings, const SettingsScreen()),
-                      if (FirebaseAuth.instance.currentUser != null &&
-                          FirebaseAuth.instance.currentUser!.providerData.isNotEmpty &&
-                          (FirebaseAuth.instance.currentUser!.providerData[0].providerId == "google.com" ||
-                              FirebaseAuth.instance.currentUser!.providerData[0].providerId == "facebook.com"))
-                        _buildMenuButton("Tarif Ekle", Icons.add, const AddRecipeScreen()),
-                    ],
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildMenuButton("Tarifler", Icons.restaurant, const RecipesScreen()),
+                          _buildMenuButton("Malzemeler", Icons.shopping_basket, const IngredientsScreen()),
+                          _buildMenuButton("Şefler", Icons.person, const ChefsScreen()),
+                          _buildMenuButton("Ayarlar", Icons.settings, const SettingsScreen()),
+                          if (FirebaseAuth.instance.currentUser != null &&
+                              FirebaseAuth.instance.currentUser!.providerData.isNotEmpty &&
+                              (FirebaseAuth.instance.currentUser!.providerData[0].providerId == "google.com" ||
+                                  FirebaseAuth.instance.currentUser!.providerData[0].providerId == "facebook.com"))
+                            _buildMenuButton("Tarif Ekle", Icons.add, const AddRecipeScreen()),
+                        ],
+                      ),
+                    ),
                   ),
                   // Sağ: Çıkış butonu
                   OutlinedButton.icon(
