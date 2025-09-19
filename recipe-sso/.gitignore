@@ -31,3 +31,22 @@ build/
 
 ### VS Code ###
 .vscode/
+
+serviceAccount.json
+
+application.properties
+application.yml
+
+# Firebase & mobile configs
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Custom env/secrets
+*.env
+*.env.*
+keys.dart
+secrets.dart
+
+# OS
+.DS_Store
